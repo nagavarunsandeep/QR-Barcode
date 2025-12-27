@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Advanced QR & Barcode Tool by TNVS. Generate Wi-Fi, UPI, vCard, and more with futuristic themes. Scan with torch, audio feedback, and history tracking.">
+    <title>QR & Barcode Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Segoe UI', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        .animate-gradient {
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        #reader video {
+            transform: scaleX(-1);
+        }
+        #reader-wrapper.fullscreen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            max-width: none;
+            border-radius: 0;
+            background: rgba(0, 0, 0, 0.5) !important;
+            backdrop-filter: blur(5px);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #reader-wrapper.fullscreen video {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto !important;
+            height: auto !important;
+            border-radius: 8px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .scanner-laser {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(239, 68, 68, 0.8);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.8);
+            animation: scan 2s linear infinite;
+            z-index: 50;
+            pointer-events: none;
+        }
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        #qrcode canvas, #qrcode img {
+            filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
+        }
+        .title-animate {
+            background: linear-gradient(to right, #2563eb, #9333ea, #db2777, #2563eb);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            background-size: 200% auto;
+            animation: gradientFlow 3s linear infinite;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        @keyframes gradientFlow { to { background-position: 200% center; } }
+    </style>
+</head>
+<body class="animate-gradient text-gray-800 dark:text-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full h-[90vh] flex flex-col overflow-hidden transition-all duration-300 border border-white/20">
+        <div class="p-6 pb-0">
+            <div class="relative text-center mb-6">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 tracking-widest uppercase">TNVS Official Tool</p>
+                <h1 class="text-3xl font-extrabold title-animate tracking-tight">QR & Barcode</h1>
+                <button onclick="toggleDarkMode()" class="absolute -top-2 right-0 p-2 text-gray-400 hover:text-blue-500 transition-colors" title="Toggle Dark Mode">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+                <button id="tab-generate" class="flex-1 py-3 text-center font-semibold text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400 transition-all" onclick="switchTab('generate')">Generate</button>
+                <button id="tab-scan" class="flex-1 py-3 text-center font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all" onclick="switchTab('scan')">Scan</button>
+            </div>
+        </div>
+
+        <!-- Generator Section -->
+        <div id="generate-section" class="p-6 pt-0 overflow-y-auto flex-1">
+            <div class="flex flex-col lg:flex-row lg:space-x-6 justify-center items-start">
+            <!-- Left Column: Select Type -->
+            <div class="space-y-3 w-full lg:w-1/4 flex-shrink-0">
+                <div class="space-y-2">
+                <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Select Type</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btn-type-qr" onclick="setType('qr')" class="p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center gap-2 border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zM6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span class="font-bold text-xs">QR Code</span>
+                    </button>
+                    <button id="btn-type-barcode" onclick="setType('barcode')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                        </svg>
+                        <span class="font-bold text-xs">Barcode</span>
+                    </button>
+                    <button id="btn-type-wifi" onclick="setType('wifi')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a10 10 0 0114.142 0M1.394 8.536a15 15 0 0121.212 0" />
+                        </svg>
+                        <span class="font-bold text-xs">Wi-Fi</span>
+                    </button>
+                    <button id="btn-type-vcard" onclick="setType('vcard')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                        </svg>
+                        <span class="font-bold text-xs">vCard</span>
+                    </button>
+                    <button id="btn-type-email" onclick="setType('email')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span class="font-bold text-xs">Email</span>
+                    </button>
+                    <button id="btn-type-sms" onclick="setType('sms')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                        <span class="font-bold text-xs">SMS</span>
+                    </button>
+                    <button id="btn-type-geo" onclick="setType('geo')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="font-bold text-xs">Location</span>
+                    </button>
+                    <button id="btn-type-event" onclick="setType('event')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span class="font-bold text-xs">Event</span>
+                    </button>
+                    <button id="btn-type-whatsapp" onclick="setType('whatsapp')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        <span class="font-bold text-xs">WhatsApp</span>
+                    </button>
+                    <button id="btn-type-upi" onclick="setType('upi')" class="p-3 rounded-xl border-2 border-transparent bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 flex flex-col items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5 0a3 3 0 110 6H9l3 3m-3-6h6m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="font-bold text-xs">UPI</span>
+                    </button>
+                </div>
+                <input type="hidden" id="code-type" value="qr">
+            </div>
+            </div>
+
+            <!-- Center Column: Inputs -->
+            <div class="space-y-3 flex-1 w-full">
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Content</label>
+                <div id="text-input-container" class="relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg blur opacity-0 group-focus-within:opacity-50 transition duration-500"></div>
+                    <input type="text" id="qr-input" placeholder="Enter text or URL" class="relative w-full p-3 pr-10 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <button onclick="toggleDictation('qr-input')" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors z-10" title="Voice Input">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                    </button>
+                </div>
+                <div id="wifi-input-container" class="hidden space-y-2">
+                    <input type="text" id="wifi-ssid" placeholder="Network Name (SSID)" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="text" id="wifi-password" placeholder="Password" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <select id="wifi-encryption" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                        <option value="WPA">WPA/WPA2</option>
+                        <option value="WEP">WEP</option>
+                        <option value="nopass">None</option>
+                    </select>
+                </div>
+                <div id="vcard-input-container" class="hidden space-y-2">
+                    <input type="text" id="vcard-name" placeholder="Full Name" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="tel" id="vcard-phone" placeholder="Mobile Phone" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="email" id="vcard-email" placeholder="Email" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="text" id="vcard-org" placeholder="Company / Organization" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="text" id="vcard-title" placeholder="Job Title" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="url" id="vcard-url" placeholder="Website URL" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                </div>
+                <div id="email-input-container" class="hidden space-y-2">
+                    <input type="email" id="email-to" placeholder="Recipient Email" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="text" id="email-subject" placeholder="Subject" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <textarea id="email-body" placeholder="Body" rows="3" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner resize-none"></textarea>
+                </div>
+                <div id="sms-input-container" class="hidden space-y-2">
+                    <input type="tel" id="sms-phone" placeholder="Phone Number" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <textarea id="sms-message" placeholder="Message" rows="3" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner resize-none"></textarea>
+                </div>
+                <div id="geo-input-container" class="hidden space-y-2">
+                    <input type="number" id="geo-lat" placeholder="Latitude (e.g., 40.7128)" step="any" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="number" id="geo-long" placeholder="Longitude (e.g., -74.0060)" step="any" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                </div>
+                <div id="event-input-container" class="hidden space-y-2">
+                    <input type="text" id="event-summary" placeholder="Event Title" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="datetime-local" id="event-start" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner text-gray-500">
+                    <input type="datetime-local" id="event-end" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner text-gray-500">
+                    <input type="text" id="event-location" placeholder="Location" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                </div>
+                <div id="whatsapp-input-container" class="hidden space-y-2">
+                    <input type="tel" id="whatsapp-phone" placeholder="Phone Number (e.g. 15551234567)" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <textarea id="whatsapp-message" placeholder="Message" rows="3" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner resize-none"></textarea>
+                </div>
+                <div id="upi-input-container" class="hidden space-y-2">
+                    <input type="text" id="upi-vpa" placeholder="UPI ID (e.g. name@bank)" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="text" id="upi-name" placeholder="Payee Name" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="number" id="upi-amount" placeholder="Amount (Optional)" step="any" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                    <input type="text" id="upi-note" placeholder="Note (Optional)" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner">
+                </div>
+            </div>
+            <div id="password-input-container" class="space-y-2">
+                <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Password Protection (Optional)</label>
+                <div class="relative">
+                    <input type="password" id="qr-password" placeholder="Enter password to encrypt data" class="w-full p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner pr-10">
+                    <button type="button" onclick="togglePasswordVisibility('qr-password')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="eye-icon-qr-password"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    </button>
+                </div>
+            </div>
+            <div id="color-input-container" class="grid grid-cols-2 gap-2 items-end">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Foreground (Gradient)</label>
+                    <div class="flex space-x-1">
+                        <input type="color" id="qr-color-dark" value="#000000" oninput="generateCode()" class="w-full h-10 p-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer">
+                        <input type="color" id="qr-color-dark-end" value="#000000" oninput="generateCode()" class="w-full h-10 p-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Background</label>
+                    <input type="color" id="qr-color-light" value="#ffffff" oninput="generateCode()" class="w-full h-10 p-1 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Size (px)</label>
+                    <input type="number" id="qr-size" value="300" min="100" max="1000" step="50" oninput="generateCode()" class="w-full h-10 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner text-center">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Error Correction</label>
+                    <select id="qr-ecc" onchange="generateCode()" class="w-full h-10 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner text-center text-sm">
+                        <option value="1">L (7%)</option>
+                        <option value="0">M (15%)</option>
+                        <option value="3">Q (25%)</option>
+                        <option value="2" selected>H (30%)</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Futuristic Themes</label>
+                    <select id="qr-theme" onchange="applyTheme(this.value)" class="w-full h-10 p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner text-center text-sm">
+                        <option value="custom">Custom</option>
+                        <option value="cyberpunk">Cyberpunk</option>
+                        <option value="matrix">Matrix</option>
+                        <option value="neon">Neon Future</option>
+                    </select>
+                </div>
+            </div>
+            <div id="logo-input-container" class="space-y-2">
+                <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Logo (Optional)</label>
+                <input type="file" id="qr-logo" accept="image/*" class="w-full p-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-all">
+            </div>
+            </div>
+            
+            <!-- Right Column: Result Area & Generate Button -->
+            <div class="flex flex-col space-y-4 w-full lg:w-80 flex-shrink-0 mt-6 lg:mt-0">
+            <div id="result-area" class="w-full flex flex-col items-center justify-center p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg transition-all min-h-[300px] transform-gpu perspective-1000">
+                <div id="result-placeholder" class="text-center text-gray-400 dark:text-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p class="text-sm font-medium">Generated code will appear here</p>
+                </div>
+                <div id="generated-content" class="hidden w-full flex flex-col items-center">
+                    <div id="qrcode" class="mb-4 p-2 bg-white rounded-lg"></div>
+                    <svg id="barcode" class="w-full h-auto mb-4"></svg>
+                    <div class="flex space-x-2 w-full">
+                        <button onclick="downloadCode()" class="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-bold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Download</span>
+                        </button>
+                        <button onclick="shareCode()" class="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white text-sm font-bold rounded-lg transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                            <span>Share</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button onclick="generateCode()" class="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                Generate
+            </button>
+            </div>
+            </div>
+        </div>
+
+        <!-- Scanner Section -->
+        <div id="scan-section" class="hidden p-6 pt-0 overflow-y-auto flex-1">
+            <div class="flex flex-col lg:flex-row gap-4 max-w-3xl mx-auto">
+                <!-- Left Panel: Camera -->
+                <div class="flex-1 flex flex-col">
+                    <div id="camera-select-container" class="mb-4 hidden">
+                        <select id="camera-select" class="w-full p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all dark:text-white shadow-inner"></select>
+                    </div>
+                    
+                    <div id="reader-wrapper" class="w-full rounded-lg overflow-hidden border-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 relative">
+                        <div class="scanner-laser hidden"></div>
+                        <div id="scanner-hud" class="absolute inset-0 pointer-events-none hidden z-20">
+                            <div class="absolute top-4 left-4 w-8 h-8 border-t-4 border-l-4 border-blue-500/80 rounded-tl-lg"></div>
+                            <div class="absolute top-4 right-4 w-8 h-8 border-t-4 border-r-4 border-blue-500/80 rounded-tr-lg"></div>
+                            <div class="absolute bottom-4 left-4 w-8 h-8 border-b-4 border-l-4 border-blue-500/80 rounded-bl-lg"></div>
+                            <div class="absolute bottom-4 right-4 w-8 h-8 border-b-4 border-r-4 border-blue-500/80 rounded-br-lg"></div>
+                            <div class="absolute inset-0 flex items-center justify-center opacity-10"><svg class="w-32 h-32 text-blue-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="0.5" d="M12 2a10 10 0 100 20 10 10 0 000-20z M12 6v6l4 2" /></svg></div>
+                        </div>
+                        <div id="reader" class="w-full h-full">
+                            <div class="flex flex-col items-center justify-center h-64">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <p class="text-gray-500 dark:text-gray-400 text-sm">Camera is inactive</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3 mt-4">
+                        <div class="flex space-x-2">
+                            <button id="btn-cam-toggle" onclick="toggleCamera()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-sm">Start Camera</button>
+                            <button onclick="toggleTorch()" class="py-3 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors shadow-sm" title="Toggle Torch">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            </button>
+                        </div>
+                        <div class="flex items-center justify-center space-x-2">
+                            <input type="checkbox" id="scan-audio" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="scan-audio" class="text-sm font-medium text-gray-900 dark:text-gray-300">Audio Feedback</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Image Upload -->
+                <div class="flex-1 flex flex-col">
+                    <div onclick="document.getElementById('qr-image-input').click()" class="flex-1 min-h-[200px] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group h-full">
+                        <div class="p-4 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mb-4 group-hover:scale-110 transition-transform">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 font-medium">Click to Upload Image</p>
+                        <p class="text-gray-400 text-sm mt-1">Supports JPG, PNG, WebP</p>
+                        <input type="file" id="qr-image-input" accept="image/*" class="hidden" onchange="scanFromFile(this)">
+                    </div>
+                </div>
+            </div>
+
+            <div id="scan-result" class="hidden mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Detected Content:</p>
+                <p id="scan-text" class="text-lg font-mono break-all text-gray-800 dark:text-white mb-3"></p>
+                <div class="flex gap-2">
+                    <div id="scan-link-actions" class="hidden flex-1">
+                        <a id="btn-open-link" href="#" target="_blank" class="w-full flex items-center justify-center py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors">
+                            Open Link
+                        </a>
+                    </div>
+                    <button onclick="copyResult()" class="flex-1 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-sm font-semibold rounded-lg transition-colors">
+                        Copy Text
+                    </button>
+                </div>
+            </div>
+            
+            <!-- History Section -->
+            <div id="scan-history" class="mt-6 hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recent Scans</h3>
+                    <button onclick="clearHistory()" class="text-xs text-red-500 hover:text-red-600 font-semibold transition-colors">Clear History</button>
+                </div>
+                <div id="history-list" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const scanText = document.getElementById('scan-text');
+            const linkActions = document.getElementById('scan-link-actions');
+            const openLinkBtn = document.getElementById('btn-open-link');
+
+            if (scanText && linkActions && openLinkBtn) {
+                const observer = new MutationObserver(() => {
+                    const text = scanText.textContent.trim();
+                    if (!text) return;
+
+                    // Check if text is URL
+                    const isUrl = /^(http|https):\/\/[^ "]+$/i.test(text) || /^[a-zA-Z0-9]+\.[a-zA-Z]{2,}(\/.*)?$/i.test(text);
+
+                    linkActions.classList.remove('hidden');
+                    
+                    if (isUrl) {
+                        let href = text;
+                        if (!/^https?:\/\//i.test(href)) href = 'https://' + href;
+                        openLinkBtn.href = href;
+                        openLinkBtn.textContent = 'Open Link';
+                    } else {
+                        openLinkBtn.href = 'https://www.google.com/search?q=' + encodeURIComponent(text);
+                        openLinkBtn.textContent = 'Search Text';
+                    }
+                });
+
+                observer.observe(scanText, { childList: true, characterData: true, subtree: true });
+            }
+        });
+    </script>
+</body>
+</html>
